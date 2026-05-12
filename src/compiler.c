@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "common.h"
+#include "object.h"
 #include "scanner.h"
 
 #ifdef DEBUG_PRINT_CODE
@@ -135,6 +136,11 @@ static void number() {
     emitConstant(NUMBER_VAL(value));
 }
 
+static void string() {
+    emitConstant(OBJ_VAL(copyString(parser.previous.start + 1,
+                                    parser.previous.length - 2)));
+}
+
 static void binary() {
     TokenType operatorType = parser.previous.type;
     ParseRule* rule = getRule(operatorType);
@@ -146,7 +152,7 @@ static void binary() {
         case TOKEN_STAR: emitByte(OP_MULTIPLY); break;
         case TOKEN_SLASH: emitByte(OP_DIVIDE); break;
         case TOKEN_BANG_EQUAL: emitBytes(OP_EQUAL, OP_NOT); break;
-        case TOKEN_EQUAL: emitByte(OP_EQUAL); break;
+        case TOKEN_EQUAL_EQUAL: emitByte(OP_EQUAL); break;
         case TOKEN_LESS: emitByte(OP_LESS); break;
         case TOKEN_LESS_EQUAL: emitBytes(OP_GREATER, OP_NOT); break;
         case TOKEN_GREATER: emitByte(OP_GREATER); break;
@@ -203,7 +209,7 @@ ParseRule rules[] = {
     [TOKEN_LESS]            = {NULL,     binary, PREC_EQAULITY},
     [TOKEN_LESS_EQUAL]      = {NULL,     binary, PREC_EQAULITY},
     [TOKEN_IDENTIFIER]      = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_STRING]          = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_STRING]          = {string,   NULL,   PREC_NONE},
     [TOKEN_NUMBER]          = {number,   NULL,   PREC_NONE},
     [TOKEN_AND]             = {NULL,     NULL,   PREC_NONE},
     [TOKEN_CLASS]           = {NULL,     NULL,   PREC_NONE},
