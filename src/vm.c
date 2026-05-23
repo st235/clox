@@ -199,6 +199,11 @@ push(valueType(a op b)); \
                 if (isFalsey(peek(0))) vm.ip += jump;
                 break;
             }
+            case OP_LOOP: {
+                int jump = READ_SHORT();
+                vm.ip -= jump;
+                break;
+            }
             case OP_RETURN:
                 // Exit interpreter.
                 return INTERPRET_OK;
