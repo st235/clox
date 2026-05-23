@@ -59,6 +59,7 @@ Chunk* compilingChunk;
 static void expression();
 static void statement();
 static void declaration();
+static void varDeclaration();
 static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
 
@@ -511,6 +512,58 @@ static void whileStatement() {
     emitByte(OP_POP);
 }
 
+static void forStatement() {
+    beginScope();
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after for.");
+
+    // Initialiser.
+    if (match(TOKEN_SEMICOLON)) {
+        // Empty on purpose.
+    } else if (match(TOKEN_VAR)) {
+        varDeclaration();
+    } else {
+        expressionStatement();
+    }
+
+    int forStart = currentChunk()->count;
+
+    // Condition.
+    int conditionStatement = -1;
+    if (!match(TOKEN_SEMICOLON)) {
+        expression();
+        consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
+
+        conditionStatement = emitJump(OP_JUMP_IF_FALSE);
+        emitByte(OP_POP);
+    }
+
+    int bodyJump = emitJump(OP_JUMP);
+
+    // Post-increment.
+    int postIncrementStart = currentChunk()->count;
+
+    if (!check(TOKEN_RIGHT_PAREN)) {
+        expression();
+        emitByte(OP_POP);
+    }
+
+    emitLoop(forStart);
+
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression");
+
+    patchJump(bodyJump);
+
+    statement();
+
+    emitLoop(postIncrementStart);
+
+    if (conditionStatement != -1) {
+        patchJump(conditionStatement);
+        emitByte(OP_POP);
+    }
+    endScope();
+}
+
 static void statement() {
     if (match(TOKEN_PRINT)) {
         printStatement();
@@ -522,6 +575,8 @@ static void statement() {
         ifStatement();
     } else if (match(TOKEN_WHILE)) {
         whileStatement();
+    } else if (match(TOKEN_FOR)) {
+        forStatement();
     } else {
         expressionStatement();
     }
