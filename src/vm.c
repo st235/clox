@@ -76,6 +76,8 @@ static void concatenate() {
 
 static InterpretResult run() {
 #define READ_BYTE() (*vm.ip++)
+#define READ_SHORT() \
+(vm.ip += 2, (uint16_t)((vm.ip[-2] << 8) | vm.ip[-1]))
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op) \
@@ -185,6 +187,16 @@ push(valueType(a op b)); \
                     runtimeError("Undefined variable '%s'.", name->chars);
                     return INTERPRET_RUNTIME_ERROR;
                 }
+                break;
+            }
+            case OP_JUMP: {
+                int jump = READ_SHORT();
+                vm.ip += jump;
+                break;
+            }
+            case OP_JUMP_IF_FALSE: {
+                int jump = READ_SHORT();
+                if (isFalsey(peek(0))) vm.ip += jump;
                 break;
             }
             case OP_RETURN:
