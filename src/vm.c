@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "chunk.h"
 #include "common.h"
@@ -13,36 +14,13 @@
 
 VM vm;
 
+static Value clockNative(int argCount, Value* args) {
+    return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+}
+
 static void resetStack() {
     vm.stackTop = vm.stack;
     vm.frameCount = 0;
-}
-
-void initVM() {
-    resetStack();
-    vm.objects = NULL;
-    initTable(&vm.globals);
-    initTable(&vm.strings);
-}
-
-void freeVM() {
-    freeObjects();
-    freeTable(&vm.globals);
-    freeTable(&vm.strings);
-}
-
-void push(Value value) {
-    *(vm.stackTop) = value;
-    vm.stackTop += 1;
-}
-
-Value pop() {
-    vm.stackTop -= 1;
-    return *vm.stackTop;
-}
-
-static Value peek(int distance) {
-    return vm.stackTop[-1 - distance];
 }
 
 static void runtimeError(const char* format, ...) {
@@ -65,6 +43,43 @@ static void runtimeError(const char* format, ...) {
     }
 
     resetStack();
+}
+
+static void defineNative(const char* name, NativeFn function) {
+    push(OBJ_VAL(copyString(name, (int)strlen(name))));
+    push(OBJ_VAL(newNative(function)));
+    tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+    pop();
+    pop();
+}
+
+void initVM() {
+    resetStack();
+    vm.objects = NULL;
+    initTable(&vm.globals);
+    initTable(&vm.strings);
+
+    defineNative("clock", clockNative);
+}
+
+void freeVM() {
+    freeObjects();
+    freeTable(&vm.globals);
+    freeTable(&vm.strings);
+}
+
+void push(Value value) {
+    *(vm.stackTop) = value;
+    vm.stackTop += 1;
+}
+
+Value pop() {
+    vm.stackTop -= 1;
+    return *vm.stackTop;
+}
+
+static Value peek(int distance) {
+    return vm.stackTop[-1 - distance];
 }
 
 static bool call(ObjFunction* function, int argCount) {
@@ -90,6 +105,12 @@ static bool callValue(Value callee, int argCount) {
         switch (OBJ_TYPE(callee)) {
             case OBJ_FUNCTION:
                 return call(AS_FUNCTION(callee), argCount);
+            case OBJ_NATIVE:
+                NativeFn native = AS_NATIVE(callee);
+                Value result = native(argCount, vm.stackTop - argCount);
+                vm.stackTop -= argCount + 1;
+                push(result);
+                return true;
             default:
                 break;
         }
