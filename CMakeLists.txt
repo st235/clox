@@ -1,9 +1,8 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 
 project(clox VERSION 1.0.0 LANGUAGES C)
 
-add_executable(clox
-    src/main.c
+add_library(clox-core
     src/chunk.c
     src/memory.c
     src/debug.c
@@ -15,4 +14,12 @@ add_executable(clox
     src/table.c
 )
 
-target_include_directories(clox PRIVATE include)
+target_include_directories(clox-core PUBLIC
+    include
+)
+
+add_executable(clox
+    src/main.c
+)
+
+target_link_libraries(clox PRIVATE clox-core)
