@@ -912,7 +912,7 @@ static void classDeclaration() {
 static void declaration() {
     if (match(TOKEN_CLASS)) {
         classDeclaration();
-    }if (match(TOKEN_VAR)) {
+    } else if (match(TOKEN_VAR)) {
         varDeclaration();
     } else if (match(TOKEN_FUN)) {
         funDeclaration();

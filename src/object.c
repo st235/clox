@@ -165,3 +165,40 @@ void printObject(Value value) {
             break;
     }
 }
+
+static void convertFunctionToString(char* buffer, ObjFunction* function) {
+    if (function->name == NULL) {
+        sprintf(buffer, "<script>");
+        return;
+    }
+    sprintf(buffer, "<fn %s>", function->name->chars);
+}
+
+void convertObjectToString(char* buffer, Value value) {
+    switch (OBJ_TYPE(value)) {
+        case OBJ_STRING:
+            sprintf(buffer, "%s", AS_CSTRING(value));
+            break;
+        case OBJ_FUNCTION:
+            convertFunctionToString(buffer, AS_FUNCTION(value));
+            break;
+        case OBJ_NATIVE:
+            sprintf(buffer, "<native fn>");
+            break;
+        case OBJ_CLOSURE:
+            convertFunctionToString(buffer, AS_CLOSURE(value)->function);
+            break;
+        case OBJ_UPVALUE:
+            sprintf(buffer, "upvalue");
+            break;
+        case OBJ_CLASS:
+            sprintf(buffer, "%s", AS_CLASS(value)->name->chars);
+            break;
+        case OBJ_INSTANCE:
+            sprintf(buffer, "%s instance", AS_INSTANCE(value)->klass->name->chars);
+            break;
+        case OBJ_BOUND_METHOD:
+            convertFunctionToString(buffer, AS_BOUND_METHOD(value)->method->function);
+            break;
+    }
+}

@@ -46,7 +46,7 @@ static void runtimeError(const char* format, ...) {
     resetStack();
 }
 
-static void defineNative(const char* name, NativeFn function) {
+void defineNative(const char* name, NativeFn function) {
     push(OBJ_VAL(copyString(name, (int)strlen(name))));
     push(OBJ_VAL(newNative(function)));
     tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
@@ -118,6 +118,13 @@ static bool callValue(Value callee, int argCount) {
             case OBJ_CLASS:
                 ObjClass* klass = AS_CLASS(callee);
                 vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(klass));
+                Value initializer;
+                if (tableGet(&klass->methods, vm.initString, &initializer)) {
+                    return call(AS_CLOSURE(initializer), argCount);
+                } else if (argCount != 0) {
+                    runtimeError("Expected 0 arguments but got %d.", argCount);
+                    return false;
+                }
                 return true;
             case OBJ_CLOSURE:
                 return call(AS_CLOSURE(callee), argCount);
@@ -130,14 +137,7 @@ static bool callValue(Value callee, int argCount) {
             case OBJ_BOUND_METHOD:
                 ObjBoundMethod* bound = AS_BOUND_METHOD(callee);
                 vm.stackTop[-argCount - 1] = bound->receiver;
-                Value initializer;
-                if (tableGet(&klass->methods, vm.initString, &initializer)) {
-                    return call(AS_CLOSURE(initializer), argCount);
-                } else if (argCount != 0) {
-                    runtimeError("Expected 0 arguments but got %d.", argCount);
-                    return false;
-                }
-                return true;
+                return call(bound->method, argCount);
             default:
                 break;
         }
@@ -233,9 +233,34 @@ static bool isFalsey(Value value) {
     return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
 }
 
+static ObjString* promoteToString(Value value) {
+    return convertValueToString(value);
+}
+
 static void concatenate() {
-    ObjString* b = AS_STRING(peek(0));
-    ObjString* a = AS_STRING(peek(1));
+    int stackCount = 2;
+
+    Value pb = peek(0);
+    Value pa = peek(1);
+
+    ObjString* b = NULL;
+    ObjString* a = NULL;
+
+    if (!IS_STRING(pa)) {
+        a = promoteToString(pa);
+        push(OBJ_VAL(a));
+        stackCount += 1;
+    } else {
+        a = AS_STRING(pa);
+    }
+
+    if (!IS_STRING(pb)) {
+        b = promoteToString(pb);
+        push(OBJ_VAL(b));
+        stackCount += 1;
+    } else {
+        b = AS_STRING(pb);
+    }
 
     int length = a->length + b->length;
     char* chars = ALLOCATE(char, length + 1);
@@ -243,8 +268,9 @@ static void concatenate() {
     memcpy(chars + a->length, b->chars, b->length);
 
     ObjString* result = takeString(chars, length);
-    pop();
-    pop();
+    for (int i = 0; i < stackCount; i++) {
+        pop();
+    }
     push(OBJ_VAL(result));
 }
 
@@ -297,7 +323,7 @@ push(valueType(a op b)); \
                 break;
             }
             case OP_ADD: {
-                if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
+                if (IS_STRING(peek(0)) || IS_STRING(peek(1))) {
                     concatenate();
                 } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
                     double b = AS_NUMBER(pop());

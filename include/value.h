@@ -96,6 +96,7 @@ void writeValueArray(ValueArray* array, Value value);
 void freeValueArray(ValueArray* array);
 
 void printValue(Value value);
+ObjString* convertValueToString(Value value);
 
 
 #endif  // CLOX_VALUE_H_

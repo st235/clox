@@ -6,6 +6,8 @@
 #include "memory.h"
 #include "object.h"
 
+#define TO_STR_BUFFER_SIZE 1024
+
 bool valuesEqual(Value a, Value b) {
 #ifdef NAN_BOXING
     if (IS_NUMBER(a) && IS_NUMBER(b)) {
@@ -44,6 +46,37 @@ void writeValueArray(ValueArray* array, Value value) {
 void freeValueArray(ValueArray* array) {
     FREE_ARRAY(Value, array->values, array->capacity);
     initValueArray(array);
+}
+
+ObjString* convertValueToString(Value value) {
+    char buffer[TO_STR_BUFFER_SIZE];
+#ifdef NAN_BOXING
+    if (IS_BOOL(value)) {
+        sprintf(buffer, AS_BOOL(value) ? "true" : "false");
+    } else if (IS_NIL(value)) {
+        sprintf(buffer, "nil");
+    } else if (IS_NUMBER(value)) {
+        sprintf(buffer, "%g", AS_NUMBER(value));
+    } else if (IS_OBJ(value)) {
+        convertObjectToString(value);
+    }
+#else
+    switch(value.type) {
+        case VAL_BOOL:
+            sprintf(buffer, AS_BOOL(value) ? "true" : "false");
+            break;
+        case VAL_NIL:
+            sprintf(buffer, "nil");
+            break;
+        case VAL_NUMBER:
+            sprintf(buffer, "%g", AS_NUMBER(value));
+            break;
+        case VAL_OBJ:
+            convertObjectToString(buffer, value);
+            break;
+    }
+#endif
+    return copyString(buffer, strlen(buffer));
 }
 
 void printValue(Value value) {

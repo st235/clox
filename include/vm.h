@@ -43,6 +43,7 @@ extern VM vm;
 
 void initVM();
 void freeVM();
+void defineNative(const char* name, NativeFn function);
 
 InterpretResult interpret(const char* source);
 void push(Value value);

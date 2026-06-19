@@ -1,0 +1,70 @@
+fun abs(a) {
+    if (a < 0) {
+        return -a;
+    }
+    return a;
+}
+
+fun gcd(a, b) {
+    if (a > b) {
+        return gcd(b, a);
+    }
+    if (a == 0) return b;
+    if (b == 0) return a;
+    return gcd(mod(b, a), a);
+}
+
+class Fraction {
+    init(nominator, denominator) {
+        var common = abs(gcd(nominator, denominator));
+        this._nominator = floor(nominator / common);
+        this._denominator = abs(floor(denominator / common));
+    }
+
+    add(fraction) {
+        var commonDenominator = gcd(this._denominator, fraction._denominator);
+        var rThis = floor(this._denominator / commonDenominator);
+        var rFraction = floor(fraction._denominator / commonDenominator);
+
+        return Fraction(this._nominator * rFraction + fraction._nominator * rThis,
+            commonDenominator * rThis * rFraction);
+    }
+
+    sub(fraction) {
+        var commonDenominator = gcd(this._denominator, fraction._denominator);
+        var rThis = floor(this._denominator / commonDenominator);
+        var rFraction = floor(fraction._denominator / commonDenominator);
+
+        return Fraction(this._nominator * rFraction - fraction._nominator * rThis,
+            commonDenominator * rThis * rFraction);
+    }
+
+    toString() {
+        var restPart = mod(this._nominator, this._denominator) + "/" + this._denominator;
+        var wholePart = floor(this._nominator / this._denominator);
+        if (wholePart > 0) {
+            return wholePart + " " + restPart;
+        }
+        return restPart;
+    }
+}
+
+var f1 = Fraction(2, 3);
+var f2 = Fraction(3, 4);
+
+print f1.add(f2).toString();
+
+var f3 = Fraction(11, 3);
+var f4 = Fraction(4, 7);
+var f5 = Fraction(7, 91);
+
+print f3.sub(f4).add(f5).toString();
+
+var f6 = Fraction(4, 8);
+
+print f6.toString();
+
+var f7 = Fraction(1, 1);
+var f8 = Fraction(4, 3);
+
+print f7.sub(f8).toString();
